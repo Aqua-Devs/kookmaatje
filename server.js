@@ -15,32 +15,15 @@ app.post('/analyze', async (req, res) => {
         const { images, only_ingredients, existing_ingredients, hongerStatus, filters } = req.body;
         let prompt = "";
 
-        // STAP 1: Alleen ingrediënten herkennen van foto's
         if (only_ingredients) {
-            prompt = `Analyseer deze foto's en lijst uitsluitend de individuele eetbare ingrediënten op die je ziet. Reageer strikt in dit JSON formaat: { "ingredienten": ["item1", "item2"] }`;
-        } 
-        // STAP 2: Recepten genereren op basis van de lijst in de app
-        else {
-            prompt = `Jij bent KookMaatje. Gebruik deze ingrediënten: ${existing_ingredients.join(', ')}. 
-            Houd rekening met de hongerstatus: ${hongerStatus} en extra filters: ${filters ? filters.join(', ') : 'geen'}.
-            GEEF ALTIJD EXACT 5 RECEPTEN TERUG IN DIT JSON FORMAAT:
-            {
-              "recepten": [
-                {
-                  "titel": "Naam van recept",
-                  "tijd": "30 min",
-                  "je_mist": ["item die je nog moet kopen"],
-                  "instructies": "Stap voor stap uitleg..."
-                }
-              ]
-            }`;
+            prompt = `Lijst alleen de ingrediënten op van deze foto's. JSON: { "ingredienten": ["item1", "item2"] }`;
+        } else {
+            prompt = `KookMaatje: Gebruik ${existing_ingredients.join(', ')}. Status: ${hongerStatus}. GEEF EXACT 5 RECEPTEN: { "recepten": [ { "titel": "Naam", "tijd": "30 min", "je_mist": ["item3"], "instructies": "Bereiding..." } ] }`;
         }
 
         const content = [{ type: "text", text: prompt }];
         if (images && images.length > 0) {
-            images.forEach(base64 => {
-                content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}` } });
-            });
+            images.forEach(base64 => content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}` } }));
         }
 
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
@@ -53,12 +36,10 @@ app.post('/analyze', async (req, res) => {
         });
 
         res.json(JSON.parse(response.data.choices[0].message.content));
-
     } catch (error) {
-        console.error("Backend Error:", error.message);
-        res.status(500).json({ error: "De chef kon de aanvraag niet verwerken." });
+        res.status(500).json({ error: "Fout bij de chef." });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`KookMaatje API live op ${PORT}`));
+app.listen(PORT, () => console.log(`API live op ${PORT}`));
