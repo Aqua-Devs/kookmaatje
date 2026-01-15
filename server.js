@@ -16,7 +16,11 @@ app.post('/analyze', async (req, res) => {
         let prompt = "";
 
         if (only_ingredients) {
-            prompt = `Lijst alleen de ingrediënten op van deze foto's. Reageer strikt in dit JSON formaat: { "ingredienten": ["item1", "item2"] }`;
+            // VERBETERDE PROMPT VOOR HOGERE ACCURATESSE
+            prompt = `Je bent een expert chef en visueel analist. Analyseer deze verzameling foto's van een koelkast of voorraadkast. 
+            Identificeer elk individueel eetbaar ingrediënt. Let op merknamen op verpakkingen en tekst. 
+            Combineer resultaten van alle foto's tot één unieke lijst zonder duplicaten. 
+            Reageer STRIKT in dit JSON formaat: { "ingredienten": ["item1", "item2"] }`;
         } else {
             prompt = `Jij bent KookMaatje. Gebruik deze ingrediënten: ${existing_ingredients.join(', ')}. 
             Hongerstatus: ${hongerStatus}. Filters: ${filters ? filters.join(', ') : 'geen'}.
@@ -43,6 +47,7 @@ app.post('/analyze', async (req, res) => {
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
             model: "gpt-4o",
             messages: [{ role: "user", content: content }],
+            max_tokens: 1500,
             response_format: { type: "json_object" }
         }, {
             headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
