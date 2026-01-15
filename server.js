@@ -12,32 +12,24 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 app.post('/analyze', async (req, res) => {
     try {
-        const { images, only_ingredients, existing_ingredients, hongerStatus, dieetVoorkeuren, kookNiveau } = req.body;
+        const { images, only_ingredients, existing_ingredients, hongerStatus } = req.body;
         let prompt = "";
 
         if (only_ingredients) {
-            prompt = `Analyseer deze foto's van ingrediënten. Geef een unieke lijst zonder duplicaten. 
-            JSON format: { "ingredienten": ["item1", "item2"] }`;
+            prompt = `Lijst alleen de ingrediënten op van deze foto's. JSON: { "ingredienten": ["item1", "item2"] }`;
         } else {
-            // VERBETERDE PROMPT VOOR VOEDINGSWAARDEN EN VARIATIE
-            prompt = `Jij bent KookMaatje, de ultieme keukenassistent. 
-            Gebruik deze ingrediënten: ${existing_ingredients.join(', ')}. 
-            Status: ${hongerStatus}. Dieet: ${dieetVoorkeuren || 'geen'}. Niveau: ${kookNiveau || 'gemiddeld'}.
-            
-            GEEF EXACT 5 RECEPTEN TERUG. Zorg voor variatie (gezond, snel, klassiek). 
-            Markeer recepten die bijna verlopen producten gebruiken als 'resteredder'.
-            
-            JSON FORMAAT:
+            prompt = `Jij bent KookMaatje. Gebruik deze ingrediënten: ${existing_ingredients.join(', ')}. 
+            Hongerstatus: ${hongerStatus}. 
+            GEEF EXACT 5 RECEPTEN TERUG IN DIT JSON FORMAAT:
             {
               "recepten": [
                 {
                   "titel": "Naam",
                   "tijd": "30 min",
-                  "kcal": "ca. 500 kcal",
-                  "is_resteredder": true,
-                  "moeilijkheid": "Makkelijk",
-                  "je_mist": ["item1"],
-                  "instructies_stappen": ["Stap 1...", "Stap 2..."]
+                  "kcal": "500",
+                  "heb_je_al": ["producten uit de lijst"],
+                  "je_mist": ["producten die niet in de lijst staan"],
+                  "instructies_stappen": ["Stap 1", "Stap 2"]
                 }
               ]
             }`;
@@ -48,8 +40,8 @@ app.post('/analyze', async (req, res) => {
             messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...(images || []).map(img => ({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}` } }))] }],
             response_format: { type: "json_object" }
         }, {
-            headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
-            timeout: 55000 
+          headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+          timeout: 55000 
         });
 
         res.json(JSON.parse(response.data.choices[0].message.content));
@@ -59,4 +51,4 @@ app.post('/analyze', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`KookMaatje Backend live op ${PORT}`));
+app.listen(PORT, () => console.log(`KookMaatje API live op ${PORT}`));
