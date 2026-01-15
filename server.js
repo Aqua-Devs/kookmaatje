@@ -16,23 +16,20 @@ app.post('/analyze', async (req, res) => {
         let prompt = "";
 
         if (only_ingredients) {
-            prompt = `Identificeer alle ingrediënten op de foto's. JSON: { "ingredienten": ["item1", "item2"] }`;
+            prompt = `Lijst ingrediënten van foto's op. JSON: { "ingredienten": ["item1"] }`;
         } else {
-            // AI-PROMPT AANGEPAST VOOR DIEET EN NIVEAU
             prompt = `Jij bent KookMaatje. Gebruik: ${existing_ingredients.join(', ')}. 
-            STRIKTE RICHTLIJNEN:
-            - Dieet: ${dieet} (Houd hier 100% rekening mee!)
-            - Kookstijl: ${kookniveau}
+            - Dieet: ${dieet}
+            - Kookniveau: ${kookniveau}
             - Hongerstatus: ${hongerStatus}
-            
-            GEEF EXACT 5 RECEPTEN IN DIT JSON FORMAAT:
+            JSON FORMAAT:
             {
               "recepten": [
                 {
                   "titel": "Naam",
                   "tijd": "30 min",
-                  "heb_je_al": ["item1"],
-                  "je_mist": ["item2"],
+                  "heb_je_al": ["items uit lijst"],
+                  "je_mist": ["items niet in lijst"],
                   "instructies_stappen": ["Stap 1", "Stap 2"]
                 }
               ]
@@ -50,7 +47,7 @@ app.post('/analyze', async (req, res) => {
 
         res.json(JSON.parse(response.data.choices[0].message.content));
     } catch (error) {
-        res.status(500).json({ error: "Interne serverfout" });
+        res.status(500).json({ error: "Serverfout" });
     }
 });
 
