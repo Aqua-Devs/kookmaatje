@@ -14,24 +14,36 @@ app.post('/analyze', async (req, res) => {
     try {
         const { images, voorkeuren, hongerStatus } = req.body; 
 
+        // Check of de Resteredder-modus actief is
+        const isResteredder = voorkeuren.includes("Focus op verspilling tegengaan");
+
         const content = [
             {
                 type: "text",
-                text: `Jij bent KookMaatje. Analyseer de foto's. 
-                Houd rekening met de hongerstatus: ${hongerStatus} en voorkeuren: ${voorkeuren}.
+                text: `Jij bent KookMaatje, de ultieme chef-kok. Analyseer de foto's en identificeer alle ingrediënten.
                 
-                GEEF ALTIJD EXACT 5 RECEPTEN TERUG IN DIT JSON FORMAAT:
+                GEBRUIKERSVOORKEUREN:
+                - Honger Status: ${hongerStatus}
+                - Extra filters: ${voorkeuren}
+                ${isResteredder ? "- FOCUS: Je bent nu in 'Resteredder-modus'. Geef prioriteit aan recepten die verse producten gebruiken die snel kunnen bederven." : ""}
+
+                STRICTE OPDRACHT:
+                1. Identificeer alle ingrediënten op de foto's.
+                2. Bedenk EXACT 5 recepten.
+                3. Zorg dat de recepten passen bij de Honger Status (${hongerStatus}).
+                
+                GEEF ANTWOORD IN DIT JSON FORMAAT:
                 {
                   "ingredienten": ["item1", "item2"],
                   "recepten": [
                     {
-                      "titel": "Naam",
-                      "beschrijving": "Korte tekst",
-                      "tijd": "30 min",
-                      "niveau": "Makkelijk",
-                      "heb_je_al": ["item1"],
-                      "je_mist": ["item3"],
-                      "instructies": "Stappen..."
+                      "titel": "Naam van gerecht",
+                      "beschrijving": "Korte, smakelijke omschrijving",
+                      "tijd": "bijv. 20 minuten",
+                      "niveau": "bijv. Gemiddeld",
+                      "heb_je_al": ["lijst"],
+                      "je_mist": ["lijst"],
+                      "instructies": "Stapsgewijze uitleg..."
                     }
                   ]
                 }`
@@ -53,9 +65,10 @@ app.post('/analyze', async (req, res) => {
         res.json(JSON.parse(response.data.choices[0].message.content));
 
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Fout:", error.message);
+        res.status(500).json({ error: "De chef kon de recepten niet samenstellen." });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`KookMaatje API live op ${PORT}`));
+app.listen(PORT, () => console.log(`KookMaatje API live op poort ${PORT}`));
