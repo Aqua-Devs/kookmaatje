@@ -16,18 +16,19 @@ app.post('/analyze', async (req, res) => {
         let prompt = "";
 
         if (only_ingredients) {
-            prompt = `Lijst alleen de ingrediënten op van deze foto's. JSON: { "ingredienten": ["item1", "item2"] }`;
+            prompt = `Analyseer deze foto's en lijst uitsluitend de eetbare ingrediënten op. JSON: { "ingredienten": ["item1", "item2"] }`;
         } else {
             prompt = `Jij bent KookMaatje. Gebruik deze ingrediënten: ${existing_ingredients.join(', ')}. 
+            Status: ${hongerStatus}.
             GEEF EXACT 5 RECEPTEN TERUG IN DIT JSON FORMAAT:
             {
               "recepten": [
                 {
                   "titel": "Naam",
                   "tijd": "30 min",
-                  "heb_je_al": ["producten die de gebruiker al heeft"],
-                  "je_mist": ["producten die nog gekocht moeten worden"],
-                  "instructies_stappen": ["Stap 1", "Stap 2"]
+                  "heb_je_al": ["item die je hebt"],
+                  "je_mist": ["item die je mist"],
+                  "instructies_stappen": ["Stap 1: Bereid...", "Stap 2: Bak..."]
                 }
               ]
             }`;
@@ -44,7 +45,7 @@ app.post('/analyze', async (req, res) => {
 
         res.json(JSON.parse(response.data.choices[0].message.content));
     } catch (error) {
-        res.status(500).json({ error: "Fout bij de chef." });
+        res.status(500).json({ error: "De chef kon de aanvraag niet verwerken." });
     }
 });
 
