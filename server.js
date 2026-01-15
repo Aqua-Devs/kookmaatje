@@ -12,37 +12,22 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 app.post('/analyze', async (req, res) => {
     try {
-        const { images, voorkeuren, hongerStatus } = req.body; 
-        const isResteredder = voorkeuren && voorkeuren.includes("Focus op verspilling tegengaan");
+        const { images, only_ingredients, existing_ingredients, hongerStatus, filters } = req.body;
+        let prompt = "";
 
-        const content = [
-            {
-                type: "text",
-                text: `Jij bent KookMaatje. Analyseer de foto's en identificeer de ingrediënten.
-                Houd rekening met de hongerstatus: ${hongerStatus} en extra voorkeuren: ${voorkeuren}.
-                ${isResteredder ? "GEEF PRIORITEIT aan ingrediënten die snel bederven." : ""}
-                
-                GEEF ALTIJD EXACT 5 RECEPTEN TERUG IN DIT JSON FORMAAT:
-                {
-                  "ingredienten": ["item1", "item2"],
-                  "recepten": [
-                    {
-                      "titel": "Naam",
-                      "beschrijving": "Korte tekst",
-                      "tijd": "30 min",
-                      "niveau": "Makkelijk",
-                      "heb_je_al": ["item1"],
-                      "je_mist": ["item3"],
-                      "instructies": "Stap 1. Stap 2. Stap 3."
-                    }
-                  ]
-                }`
-            }
-        ];
+        if (only_ingredients) {
+            prompt = `Analyseer deze foto's en lijst uitsluitend de eetbare ingrediënten op. JSON format: { "ingredienten": ["item1", "item2"] }`;
+        } else {
+            prompt = `Jij bent KookMaatje. Gebruik deze ingrediënten: ${existing_ingredients.join(', ')}. 
+            Houd rekening met de hongerstatus: ${hongerStatus} en filters: ${filters.join(', ')}.
+            GEEF EXACT 5 RECEPTEN TERUG IN DIT JSON FORMAAT: 
+            { "recepten": [ { "titel": "Naam", "tijd": "30 min", "je_mist": ["item3"], "instructies": "Bereiding..." } ] }`;
+        }
 
-        images.forEach(base64 => {
-            content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}` } });
-        });
+        const content = [{ type: "text", text: prompt }];
+        if (images && images.length > 0) {
+            images.forEach(base64 => content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}` } }));
+        }
 
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
             model: "gpt-4o",
@@ -50,14 +35,12 @@ app.post('/analyze', async (req, res) => {
             response_format: { type: "json_object" }
         }, {
             headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
-            timeout: 55000 // Geef OpenAI de tijd
+            timeout: 55000 
         });
 
         res.json(JSON.parse(response.data.choices[0].message.content));
-
     } catch (error) {
-        console.error("Backend Error:", error.message);
-        res.status(500).json({ error: "De chef kon de recepten niet samenstellen." });
+        res.status(500).json({ error: "Fout bij de chef." });
     }
 });
 
