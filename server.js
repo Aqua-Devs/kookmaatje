@@ -12,42 +12,40 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 app.post('/analyze', async (req, res) => {
     try {
-        const { images, only_ingredients, existing_ingredients, hongerStatus, filters } = req.body;
+        const { images, only_ingredients, existing_ingredients, hongerStatus, dieetVoorkeuren, kookNiveau } = req.body;
         let prompt = "";
 
         if (only_ingredients) {
-            // VERBETERDE PROMPT VOOR HOGERE ACCURATESSE
-            prompt = `Je bent een expert chef en visueel analist. Analyseer deze verzameling foto's van een koelkast of voorraadkast. 
-            Identificeer elk individueel eetbaar ingrediënt. Let op merknamen op verpakkingen en tekst. 
-            Combineer resultaten van alle foto's tot één unieke lijst zonder duplicaten. 
-            Reageer STRIKT in dit JSON formaat: { "ingredienten": ["item1", "item2"] }`;
+            prompt = `Analyseer deze foto's van ingrediënten. Geef een unieke lijst zonder duplicaten. 
+            JSON format: { "ingredienten": ["item1", "item2"] }`;
         } else {
-            prompt = `Jij bent KookMaatje. Gebruik deze ingrediënten: ${existing_ingredients.join(', ')}. 
-            Hongerstatus: ${hongerStatus}. Filters: ${filters ? filters.join(', ') : 'geen'}.
-            GEEF ALTIJD EXACT 5 RECEPTEN TERUG IN DIT JSON FORMAAT:
+            // VERBETERDE PROMPT VOOR VOEDINGSWAARDEN EN VARIATIE
+            prompt = `Jij bent KookMaatje, de ultieme keukenassistent. 
+            Gebruik deze ingrediënten: ${existing_ingredients.join(', ')}. 
+            Status: ${hongerStatus}. Dieet: ${dieetVoorkeuren || 'geen'}. Niveau: ${kookNiveau || 'gemiddeld'}.
+            
+            GEEF EXACT 5 RECEPTEN TERUG. Zorg voor variatie (gezond, snel, klassiek). 
+            Markeer recepten die bijna verlopen producten gebruiken als 'resteredder'.
+            
+            JSON FORMAAT:
             {
               "recepten": [
                 {
-                  "titel": "Naam van recept",
+                  "titel": "Naam",
                   "tijd": "30 min",
-                  "je_mist": ["item die je mist"],
-                  "instructies": "Stap voor stap uitleg..."
+                  "kcal": "ca. 500 kcal",
+                  "is_resteredder": true,
+                  "moeilijkheid": "Makkelijk",
+                  "je_mist": ["item1"],
+                  "instructies_stappen": ["Stap 1...", "Stap 2..."]
                 }
               ]
             }`;
         }
 
-        const content = [{ type: "text", text: prompt }];
-        if (images && images.length > 0) {
-            images.forEach(base64 => {
-                content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}` } });
-            });
-        }
-
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
             model: "gpt-4o",
-            messages: [{ role: "user", content: content }],
-            max_tokens: 1500,
+            messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...(images || []).map(img => ({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}` } }))] }],
             response_format: { type: "json_object" }
         }, {
             headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
@@ -56,10 +54,9 @@ app.post('/analyze', async (req, res) => {
 
         res.json(JSON.parse(response.data.choices[0].message.content));
     } catch (error) {
-        console.error("Fout:", error.message);
-        res.status(500).json({ error: "De chef kon de aanvraag niet verwerken." });
+        res.status(500).json({ error: "Fout bij de chef." });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`API live op ${PORT}`));
+app.listen(PORT, () => console.log(`KookMaatje Backend live op ${PORT}`));
