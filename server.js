@@ -19,16 +19,14 @@ app.post('/analyze', async (req, res) => {
             prompt = `Lijst alleen de ingrediënten op van deze foto's. JSON: { "ingredienten": ["item1", "item2"] }`;
         } else {
             prompt = `Jij bent KookMaatje. Gebruik deze ingrediënten: ${existing_ingredients.join(', ')}. 
-            Hongerstatus: ${hongerStatus}. 
             GEEF EXACT 5 RECEPTEN TERUG IN DIT JSON FORMAAT:
             {
               "recepten": [
                 {
                   "titel": "Naam",
                   "tijd": "30 min",
-                  "kcal": "500",
-                  "heb_je_al": ["producten uit de lijst"],
-                  "je_mist": ["producten die niet in de lijst staan"],
+                  "heb_je_al": ["producten die de gebruiker al heeft"],
+                  "je_mist": ["producten die nog gekocht moeten worden"],
                   "instructies_stappen": ["Stap 1", "Stap 2"]
                 }
               ]
@@ -40,8 +38,8 @@ app.post('/analyze', async (req, res) => {
             messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...(images || []).map(img => ({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}` } }))] }],
             response_format: { type: "json_object" }
         }, {
-          headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
-          timeout: 55000 
+            headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+            timeout: 55000 
         });
 
         res.json(JSON.parse(response.data.choices[0].message.content));
@@ -51,4 +49,4 @@ app.post('/analyze', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`KookMaatje API live op ${PORT}`));
+app.listen(PORT, () => console.log(`API live op ${PORT}`));
