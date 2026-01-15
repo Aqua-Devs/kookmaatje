@@ -12,22 +12,28 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 app.post('/analyze', async (req, res) => {
     try {
-        const { images, only_ingredients, existing_ingredients, hongerStatus } = req.body;
+        const { images, only_ingredients, existing_ingredients, hongerStatus, dieet, kookniveau } = req.body;
         let prompt = "";
 
         if (only_ingredients) {
-            prompt = `Identificeer alle eetbare ingrediënten op deze foto's. Reageer in JSON: { "ingredienten": ["item1", "item2"] }`;
+            prompt = `Identificeer alle ingrediënten op de foto's. JSON: { "ingredienten": ["item1", "item2"] }`;
         } else {
+            // AI-PROMPT AANGEPAST VOOR DIEET EN NIVEAU
             prompt = `Jij bent KookMaatje. Gebruik: ${existing_ingredients.join(', ')}. 
-            REAGEER STRIKT IN DIT JSON FORMAAT:
+            STRIKTE RICHTLIJNEN:
+            - Dieet: ${dieet} (Houd hier 100% rekening mee!)
+            - Kookstijl: ${kookniveau}
+            - Hongerstatus: ${hongerStatus}
+            
+            GEEF EXACT 5 RECEPTEN IN DIT JSON FORMAAT:
             {
               "recepten": [
                 {
                   "titel": "Naam",
                   "tijd": "30 min",
-                  "heb_je_al": ["lijst items uit voorraad"],
-                  "je_mist": ["lijst ontbrekende items"],
-                  "instructies_stappen": ["Stap 1: ...", "Stap 2: ..."]
+                  "heb_je_al": ["item1"],
+                  "je_mist": ["item2"],
+                  "instructies_stappen": ["Stap 1", "Stap 2"]
                 }
               ]
             }`;
