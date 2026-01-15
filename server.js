@@ -13,37 +13,27 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 app.post('/analyze', async (req, res) => {
     try {
         const { images, voorkeuren, hongerStatus } = req.body; 
-
-        // Check of de Resteredder-modus actief is
-        const isResteredder = voorkeuren.includes("Focus op verspilling tegengaan");
+        const isResteredder = voorkeuren && voorkeuren.includes("Focus op verspilling tegengaan");
 
         const content = [
             {
                 type: "text",
-                text: `Jij bent KookMaatje, de ultieme chef-kok. Analyseer de foto's en identificeer alle ingrediënten.
+                text: `Jij bent KookMaatje. Analyseer de foto's en identificeer de ingrediënten.
+                Houd rekening met de hongerstatus: ${hongerStatus} en extra voorkeuren: ${voorkeuren}.
+                ${isResteredder ? "GEEF PRIORITEIT aan ingrediënten die snel bederven." : ""}
                 
-                GEBRUIKERSVOORKEUREN:
-                - Honger Status: ${hongerStatus}
-                - Extra filters: ${voorkeuren}
-                ${isResteredder ? "- FOCUS: Je bent nu in 'Resteredder-modus'. Geef prioriteit aan recepten die verse producten gebruiken die snel kunnen bederven." : ""}
-
-                STRICTE OPDRACHT:
-                1. Identificeer alle ingrediënten op de foto's.
-                2. Bedenk EXACT 5 recepten.
-                3. Zorg dat de recepten passen bij de Honger Status (${hongerStatus}).
-                
-                GEEF ANTWOORD IN DIT JSON FORMAAT:
+                GEEF ALTIJD EXACT 5 RECEPTEN TERUG IN DIT JSON FORMAAT:
                 {
                   "ingredienten": ["item1", "item2"],
                   "recepten": [
                     {
-                      "titel": "Naam van gerecht",
-                      "beschrijving": "Korte, smakelijke omschrijving",
-                      "tijd": "bijv. 20 minuten",
-                      "niveau": "bijv. Gemiddeld",
-                      "heb_je_al": ["lijst"],
-                      "je_mist": ["lijst"],
-                      "instructies": "Stapsgewijze uitleg..."
+                      "titel": "Naam",
+                      "beschrijving": "Korte tekst",
+                      "tijd": "30 min",
+                      "niveau": "Makkelijk",
+                      "heb_je_al": ["item1"],
+                      "je_mist": ["item3"],
+                      "instructies": "Stap 1. Stap 2. Stap 3."
                     }
                   ]
                 }`
@@ -59,16 +49,17 @@ app.post('/analyze', async (req, res) => {
             messages: [{ role: "user", content: content }],
             response_format: { type: "json_object" }
         }, {
-            headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` }
+            headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+            timeout: 55000 // Geef OpenAI de tijd
         });
 
         res.json(JSON.parse(response.data.choices[0].message.content));
 
     } catch (error) {
-        console.error("Fout:", error.message);
+        console.error("Backend Error:", error.message);
         res.status(500).json({ error: "De chef kon de recepten niet samenstellen." });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`KookMaatje API live op poort ${PORT}`));
+app.listen(PORT, () => console.log(`KookMaatje API live op ${PORT}`));
