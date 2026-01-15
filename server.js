@@ -3,46 +3,48 @@ const axios = require('axios');
 const cors = require('cors');
 const dotenv = require('dotenv');
 
-// Instellingen laden
+// Laad instellingen uit .env (alleen voor lokaal gebruik)
 dotenv.config();
+
 const app = express();
 
-// Middleware
-app.use(cors()); // Zorgt dat je app mag praten met de server
-app.use(express.json({ limit: '50mb' })); // Nodig voor het ontvangen van meerdere foto's
+// Beperk de grootte van de body omdat base64 foto's groot zijn (50mb)
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// De 'Analyze' route
 app.post('/analyze', async (req, res) => {
     try {
-        const { images } = req.body; // De lijst met base64 foto's uit Flutter
+        const { images } = req.body;
 
         if (!images || images.length === 0) {
             return res.status(400).json({ error: "Geen afbeeldingen ontvangen" });
         }
 
-        console.log(`Ontvangen: ${images.length} foto's. Analyseren via OpenAI...`);
+        console.log(`Chef analyseert nu ${images.length} foto's...`);
 
-        // Bouw het bericht voor OpenAI
+        // De krachtige prompt voor een gestructureerd antwoord
         const content = [
             {
                 type: "text",
-                text: "Jij bent een sterrenchef. Kijk naar deze foto's van mijn koelkast en voorraad. " +
-                      "1. Identificeer de ingrediënten. " +
-                      "2. Bedenk 3 creatieve, haalbare recepten. " +
-                      "3. Geef een lijstje van wat ik eventueel nog mis. " +
-                      "Antwoord in duidelijke Nederlandse Markdown."
+                text: "Jij bent KookMaatje, een sterrenchef die mensen helpt koken met wat ze nog hebben. " +
+                      "Analyseer de foto's en geef een antwoord in dit EXACTE formaat: " +
+                      "1. Start met een lijstje: '**Gevonden ingrediënten**'. " +
+                      "2. Geef daarna 3 recepten. Gebruik voor elk recept: " +
+                      "### [Naam van het gerecht] \n" +
+                      "* **Tijd**: [minuten] \n" +
+                      "* **Ingrediënten**: [lijst] \n" +
+                      "* **Instructies**: [stappenplannetje] \n\n" +
+                      "Antwoord volledig in het Nederlands."
             }
         ];
 
-        // Voeg elke foto toe aan het bericht
+        // Voeg de base64 afbeeldingen toe
         images.forEach(base64 => {
             content.push({
                 type: "image_url",
-                image_url: {
-                    url: `data:image/jpeg;base64,${base64}`
-                }
+                image_url: { url: `data:image/jpeg;base64,${base64}` }
             });
         });
 
@@ -50,33 +52,24 @@ app.post('/analyze', async (req, res) => {
             'https://api.openai.com/v1/chat/completions',
             {
                 model: "gpt-4o",
-                messages: [
-                    {
-                        role: "user",
-                        content: content
-                    }
-                ],
+                messages: [{ role: "user", content: content }],
                 max_tokens: 1500
             },
             {
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${OPENAI_API_KEY}`
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                    'Content-Type': 'application/json'
                 }
             }
         );
 
-        const aiResultaat = response.data.choices[0].message.content;
-        res.json({ result: aiResultaat });
+        res.json({ result: response.data.choices[0].message.content });
 
     } catch (error) {
-        console.error("OpenAI Error:", error.response ? error.response.data : error.message);
-        res.status(500).json({ error: "De chef heeft een foutje gemaakt bij het analyseren." });
+        console.error("OpenAI Error:", error.response?.data || error.message);
+        res.status(500).json({ error: "De chef heeft een technisch probleem." });
     }
 });
 
-// Start de server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Kookmaatje server draait op poort ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Backend live op poort ${PORT}`));
