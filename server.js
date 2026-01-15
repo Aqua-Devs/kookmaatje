@@ -12,25 +12,28 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 app.post('/analyze', async (req, res) => {
     try {
-        const { images, only_ingredients, existing_ingredients, hongerStatus, dieet, kookniveau } = req.body;
+        const { images, only_ingredients, existing_ingredients, hongerStatus, dieet, allergieen, naam } = req.body;
         let prompt = "";
 
         if (only_ingredients) {
-            prompt = `Lijst ingrediënten van foto's op. JSON: { "ingredienten": ["item1"] }`;
+            prompt = `Identificeer alle eetbare ingrediënten op deze foto's. Reageer in JSON: { "ingredienten": ["item1", "item2"] }`;
         } else {
-            prompt = `Jij bent KookMaatje. Gebruik: ${existing_ingredients.join(', ')}. 
+            prompt = `Jij bent KookMaatje, de persoonlijke chef van ${naam}. 
+            RECEPTEN MOETEN VOLDOEN AAN DEZE STRIKTE EISEN:
             - Dieet: ${dieet}
-            - Kookniveau: ${kookniveau}
-            - Hongerstatus: ${hongerStatus}
-            JSON FORMAAT:
+            - Allergieën (VERBODEN): ${allergieen ? allergieen.join(', ') : 'Geen'}
+            - Kookniveau/Hongerstatus: ${hongerStatus}
+            - Beschikbare ingrediënten: ${existing_ingredients.join(', ')}
+
+            GEEF EXACT 5 RECEPTEN TERUG IN DIT JSON FORMAAT:
             {
               "recepten": [
                 {
                   "titel": "Naam",
                   "tijd": "30 min",
-                  "heb_je_al": ["items uit lijst"],
-                  "je_mist": ["items niet in lijst"],
-                  "instructies_stappen": ["Stap 1", "Stap 2"]
+                  "heb_je_al": ["items die de gebruiker al heeft"],
+                  "je_mist": ["items die nog gekocht moeten worden"],
+                  "instructies_stappen": ["Stap 1...", "Stap 2..."]
                 }
               ]
             }`;
@@ -38,7 +41,13 @@ app.post('/analyze', async (req, res) => {
 
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
             model: "gpt-4o",
-            messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...(images || []).map(img => ({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}` } }))] }],
+            messages: [{ 
+                role: "user", 
+                content: [
+                    { type: "text", text: prompt }, 
+                    ...(images || []).map(img => ({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}` } }))
+                ] 
+            }],
             response_format: { type: "json_object" }
         }, {
             headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
@@ -47,7 +56,8 @@ app.post('/analyze', async (req, res) => {
 
         res.json(JSON.parse(response.data.choices[0].message.content));
     } catch (error) {
-        res.status(500).json({ error: "Serverfout" });
+        console.error("Fout:", error.message);
+        res.status(500).json({ error: "Serverfout bij het genereren van recepten." });
     }
 });
 
