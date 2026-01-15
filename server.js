@@ -16,12 +16,9 @@ app.post('/analyze', async (req, res) => {
         let prompt = "";
 
         if (only_ingredients) {
-            prompt = `Analyseer deze foto's en lijst uitsluitend de eetbare ingrediënten op. JSON format: { "ingredienten": ["item1", "item2"] }`;
+            prompt = `Analyseer de foto's en lijst alleen de ingrediënten op. JSON: { "ingredienten": ["item1", "item2"] }`;
         } else {
-            prompt = `Jij bent KookMaatje. Gebruik deze ingrediënten: ${existing_ingredients.join(', ')}. 
-            Houd rekening met de hongerstatus: ${hongerStatus} en filters: ${filters.join(', ')}.
-            GEEF EXACT 5 RECEPTEN TERUG IN DIT JSON FORMAAT: 
-            { "recepten": [ { "titel": "Naam", "tijd": "30 min", "je_mist": ["item3"], "instructies": "Bereiding..." } ] }`;
+            prompt = `KookMaatje: Gebruik ${existing_ingredients.join(', ')}. Status: ${hongerStatus}. GEEF EXACT 5 RECEPTEN: { "recepten": [ { "titel": "Naam", "tijd": "30 min", "je_mist": ["item3"], "instructies": "Bereiding..." } ] }`;
         }
 
         const content = [{ type: "text", text: prompt }];
@@ -45,4 +42,4 @@ app.post('/analyze', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`KookMaatje API live op ${PORT}`));
+app.listen(PORT, () => console.log(`KookMaatje live op ${PORT}`));
