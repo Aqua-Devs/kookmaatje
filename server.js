@@ -1,55 +1,41 @@
-const express = require('express');
-const axios = require('axios');
-const cors = require('cors');
-const dotenv = require('dotenv');
+// ... (bestaande imports blijven gelijk) 
 
-dotenv.config();
-const app = express();
-
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-
-// Route voor analyse en recepten
 app.post('/analyze', async (req, res) => {
     try {
-        const { images, only_ingredients, existing_ingredients, naam, allergieen, gezinsgrootte } = req.body;
+        // Zorg voor fallback waarden (empty array) als data ontbreekt 
+        const images = req.body.images || [];
+        const only_ingredients = req.body.only_ingredients || false;
+        const existing_ingredients = req.body.existing_ingredients || [];
+        const allergieen = req.body.allergieen || []; 
+        const naam = req.body.naam || "Chef";
+        const gezinsgrootte = req.body.gezinsgrootte || 2;
+        const dieet = req.body.dieet || "geen specifiek";
+        const hongerStatus = req.body.hongerStatus || "normaal";
 
-        if (!OPENAI_API_KEY) {
-            console.error("CRITICAL: OPENAI_API_KEY is missing!");
-            return res.status(500).json({ error: "Server configuratie fout: API key mist." });
+        let prompt = "";
+
+        if (only_ingredients) {
+            prompt = `GEBRUIK JE COMPUTER VISION: Analyseer deze foto's extreem nauwkeurig...`;
+        } else {
+            // De .join() werkt nu altijd omdat allergieen/ingredients nooit null zijn 
+            const allergieTekst = allergieen.includes("Geen") ? "geen" : allergieen.join(', ');
+            const ingredientenTekst = existing_ingredients.join(', ');
+
+            prompt = `Jij bent KookMaatje, de persoonlijke chef van ${naam}. 
+            STRIKTE VOORSCHRIFTEN:
+            1. ALLERGIEËN: Gebruik ABSOLUUT GEEN: ${allergieTekst}.
+            2. VOORRAAD: Gebruik deze lijst: ${ingredientenTekst}. 
+            ...`;
         }
-
-        let prompt = only_ingredients 
-            ? `Identificeer ingrediënten in JSON: { "ingredienten": [] }`
-            : `Jij bent chef van ${naam} voor ${gezinsgrootte} pers. Geen ${allergieen}. Recept in JSON: { "recepten": [] }`;
-
-        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-            model: "gpt-4o",
-            messages: [{ 
-                role: "user", 
-                content: [
-                    { type: "text", text: prompt },
-                    ...(images || []).map(img => ({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}` } }))
-                ] 
-            }],
-            response_format: { type: "json_object" }
-        }, { 
-            headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
-            timeout: 55000 
-        });
-
-        res.json(JSON.parse(response.data.choices[0].message.content));
-
+        
+        // ... (rest van de OpenAI call) 
+        
     } catch (error) {
-        console.error("Error details:", error.message);
-        res.status(500).json({ error: "AI verwerkingsfout" });
+        console.error("Fout bij AI analyse:", error);
+        res.status(500).json({ error: "Er ging iets mis op de server." });
     }
 });
 
-// DEZE REGELS FIXEN DE RENDER CRASH:
+// Zorg dat Render de poort kan toewijzen 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Backend actief op poort ${PORT} en host 0.0.0.0`);
-});
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 API live op poort ${PORT}`));
